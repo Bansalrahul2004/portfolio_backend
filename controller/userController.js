@@ -1,22 +1,20 @@
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary } from "cloudinary";//
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors.js";
 import { User } from "../models/userSchema.js";
-import ErrorHandler from "../middlewares/error.js";
+import ErrorHandler  from "../middlewares/error.js";
 import { generateToken } from "../utils/jwtToken.js";
 import crypto from "crypto";
 import { sendEmail } from "../utils/sendEmail.js";
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
-export const register = catchAsyncErrors(async (req, res, next) => {
+//REGISTER USER
+export const register = catchAsyncErrors(async (req, res, next) => {//
+  if (!req.files || Object.keys(req.files).length === 0) {
+    return next(new ErrorHandler("Avatar and Resume Required!", 400)); // 400 Bad Request
+  }
   const { avatar, resume } = req.files;
 
-  // POSTING AVATAR
+  //POSTING AVATAR
   const cloudinaryResponseForAvatar = await cloudinary.uploader.upload(
     avatar.tempFilePath,
     { folder: "PORTFOLIO AVATAR" }
@@ -29,9 +27,9 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Failed to upload avatar to Cloudinary", 500));
   }
 
-  // POSTING RESUME
+  //POSTING RESUME
   const cloudinaryResponseForResume = await cloudinary.uploader.upload(
-    resume.tempFilePath,
+    resume.tempFilePath,// tempFilePath is the path where the file is stored
     { folder: "PORTFOLIO RESUME" }
   );
   if (!cloudinaryResponseForResume || cloudinaryResponseForResume.error) {
@@ -41,7 +39,6 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     );
     return next(new ErrorHandler("Failed to upload resume to Cloudinary", 500));
   }
-
   const {
     fullName,
     email,
@@ -54,8 +51,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     twitterURL,
     facebookURL,
     linkedInURL,
-  } = req.body;
-
+  } = req.body;// Destructuring the request body
   const user = await User.create({
     fullName,
     email,
@@ -69,16 +65,19 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     facebookURL,
     linkedInURL,
     avatar: {
-      public_id: cloudinaryResponseForAvatar.public_id,
-      url: cloudinaryResponseForAvatar.secure_url,
+      public_id: cloudinaryResponseForAvatar.public_id, // Set your cloudinary public_id here
+      url: cloudinaryResponseForAvatar.secure_url, // Set your cloudinary secure_url here
     },
     resume: {
-      public_id: cloudinaryResponseForResume.public_id,
-      url: cloudinaryResponseForResume.secure_url,
+      public_id: cloudinaryResponseForResume.public_id, // Set your cloudinary public_id here
+      url: cloudinaryResponseForResume.secure_url, // Set your cloudinary secure_url here
     },
   });
-
-  generateToken(user, "Registered!", 201, res);
+  // generateToken(user, "Registered!", 201, res);
+  res.status(201).json({
+    success: true,
+    message: "Registered Successfully!",
+  });
 });
 
 export const login = catchAsyncErrors(async (req, res, next) => {
@@ -102,9 +101,7 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
     .status(200)
     .cookie("token", "", {
       httpOnly: true,
-      expires: new Date(Date.now()), // Ensure this is a valid Date object
-      sameSite: "None",
-      secure: true,
+      expires: new Date(Date.now()),
     })
     .json({
       success: true,
