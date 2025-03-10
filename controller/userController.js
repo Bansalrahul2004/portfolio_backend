@@ -6,13 +6,17 @@ import { generateToken } from "../utils/jwtToken.js";
 import crypto from "crypto";
 import { sendEmail } from "../utils/sendEmail.js";
 
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 export const register = catchAsyncErrors(async (req, res, next) => {
-  if (!req.files || Object.keys(req.files).length === 0) {
-    return next(new ErrorHandler("Avatar Required!", 400));
-  }
   const { avatar, resume } = req.files;
 
-  //POSTING AVATAR
+  // POSTING AVATAR
   const cloudinaryResponseForAvatar = await cloudinary.uploader.upload(
     avatar.tempFilePath,
     { folder: "PORTFOLIO AVATAR" }
@@ -25,7 +29,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Failed to upload avatar to Cloudinary", 500));
   }
 
-  //POSTING RESUME
+  // POSTING RESUME
   const cloudinaryResponseForResume = await cloudinary.uploader.upload(
     resume.tempFilePath,
     { folder: "PORTFOLIO RESUME" }
@@ -37,6 +41,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     );
     return next(new ErrorHandler("Failed to upload resume to Cloudinary", 500));
   }
+
   const {
     fullName,
     email,
@@ -50,6 +55,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     facebookURL,
     linkedInURL,
   } = req.body;
+
   const user = await User.create({
     fullName,
     email,
@@ -63,14 +69,15 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     facebookURL,
     linkedInURL,
     avatar: {
-      public_id: cloudinaryResponse.public_id, // Set your cloudinary public_id here
-      url: cloudinaryResponse.secure_url, // Set your cloudinary secure_url here
+      public_id: cloudinaryResponseForAvatar.public_id,
+      url: cloudinaryResponseForAvatar.secure_url,
     },
     resume: {
-      public_id: cloudinaryResponse.public_id, // Set your cloudinary public_id here
-      url: cloudinaryResponse.secure_url, // Set your cloudinary secure_url here
+      public_id: cloudinaryResponseForResume.public_id,
+      url: cloudinaryResponseForResume.secure_url,
     },
   });
+
   generateToken(user, "Registered!", 201, res);
 });
 
@@ -95,7 +102,7 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
     .status(200)
     .cookie("token", "", {
       httpOnly: true,
-      expires: new Date(Date.now()),
+      expires: new Date(Date.now()), // Ensure this is a valid Date object
       sameSite: "None",
       secure: true,
     })
